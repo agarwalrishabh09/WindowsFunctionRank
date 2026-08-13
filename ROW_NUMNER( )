@@ -1,0 +1,72 @@
+ROW_NUMBER does not have any argument. It will simply assign an integer row number as per the ORDER BY clause.
+
+Requirement: Top 3 Materials by Sales Value per Customer using HANA Ranking
+Data:
+Customer Material SalesValue
+--------------------------------
+1000     MAT1     250000
+1000     MAT2     180000
+1000     MAT3     120000
+1000     MAT4      90000
+2000     MAT8     400000
+2000     MAT1     320000
+2000     MAT6     150000
+
+Solution:
+
+SELECT *
+FROM
+(
+    SELECT
+
+        vbrk.kunag AS Customer,
+        vbrp.matnr AS Material,
+        SUM(vbrp.netwr) AS SalesValue,
+
+        ROW_NUMBER()
+          OVER
+          (
+             PARTITION BY vbrk.kunag    // creates independent ranking for every customer
+             ORDER BY SUM(vbrp.netwr) DESC
+          ) AS RankNo
+
+    FROM vbrk
+
+    INNER JOIN vbrp
+      ON vbrk.vbeln = vbrp.vbeln
+
+    GROUP BY
+       vbrk.kunag,
+       vbrp.matnr
+
+) X
+
+WHERE RankNo <= 3;
+
+Result:
+Customer Material Sales Rank
+--------------------------------
+1000     MAT1     250000   1
+1000     MAT2     180000   2
+1000     MAT3     120000   3
+
+2000     MAT8     400000   1
+2000     MAT1     320000   2
+2000     MAT6     150000   3
+
+2. Usage of ROW_NUMBER( )
+
+SELECT FROM /dmo/flight
+       FIELDS
+           carrier_id,
+           connection_id,
+           seats_occupied,
+           ROW_NUMBER( ) OVER( PARTITION BY carrier_id
+                               ORDER BY seats_occupied ) AS so_row,
+           ROW_NUMBER( ) OVER( PARTITION BY carrier_id
+                               ORDER BY flight_date ) AS fldate_row
+       INTO TABLE @DATA(lt_window).
+
+
+
+- can use this ROW_NUMBER( ) multiple times to get row number with different sort order but the result set will be sorted by per the sort order used for last partition.
