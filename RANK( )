@@ -1,0 +1,64 @@
+RANK / DENSE_RANK
+
+Rank simply assigns the rank based on ORDER BY clause. 
+Dense Rank function is same as Rank except it does not skip any rank if multiple entries exists with same ORDER BY field values.
+
+********************************************************************************************************************************
+Requirement: Get the connection ID based on the carrier ID in ascending order
+Data set:
+CARRIER_ID  CONNECTION_ID  FLIGHT_DATE  PRICE    CURRENCY_CODE  PLANE_TYPE_ID  SEATS_MAX  SEATS_OCCUPIED
+
+SQ          0001           2022-07-20   10818.00 SGD            767-200        260        223
+SQ          0001           2021-09-23    5950.00 SGD            A340-600       330        168
+SQ          0002           2022-07-21   11765.00 SGD            747-400        385        350
+SQ          0002           2021-09-24   10953.00 SGD            747-400        385        334
+SQ          0011           2022-07-21    2359.00 SGD            767-200        260        132
+SQ          0011           2021-09-24    4880.00 SGD            A340-600       330        310
+SQ          0012           2022-07-23    4665.00 SGD            767-200        260        236
+SQ          0012           2021-09-26    2574.00 SGD            747-400        385        215
+
+UA          0058           2022-07-18    6629.00 USD            767-200        260        200
+UA          0058           2021-09-21    4996.00 USD            747-400        385        231
+UA          0059           2022-07-19    4131.00 USD            A340-600       330        161
+UA          0059           2021-09-22    6053.00 USD            A340-600       330        237
+UA          1537           2022-07-22     893.00 USD            A321-200       150         88
+UA          1537           2021-09-25     805.00 USD            737-800        140         75
+
+AA          0322           2022-07-24    1103.00 USD            A320-200       130         93
+*******************************************************************************************************************************
+
+SELECT FROM /dmo/flight
+       FIELDS
+           carrier_id,
+           connection_id,
+           seats_occupied,
+           RANK( ) OVER( PARTITION BY carrier_id
+                         ORDER BY connection_id ) AS rank,
+           DENSE_RANK( ) OVER( PARTITION BY carrier_id
+                               ORDER BY connection_id ) AS dense_rank
+       INTO TABLE @DATA(lt_window).
+
+Output:
+____________________________________________________________
+
+CARRIER_ID  CONNECTION_ID  SEATS_OCCUPIED  RANK  DENSE_RANK
+
+UA          0058           200             1     1
+UA          0058           231             1     1
+UA          0059           161             3     2
+UA          0059           237             3     2
+UA          1537           88              5     3
+UA          1537           75              5     3
+
+SQ          0001           223             1     1
+SQ          0001           168             1     1
+SQ          0002           350             3     2
+SQ          0002           334             3     2
+SQ          0011           132             5     3
+SQ          0011           310             5     3
+SQ          0012           236             7     4
+SQ          0012           215             7     4
+
+AZ          0788           221             1     1
+
+Note: Rank skips number 2 as first two entries are at the same rank 1. Dense Rank does continuous ranking without skipping any rank.
