@@ -1,0 +1,20 @@
+Issues with Aggregate Queries
+- FOR ALL ENTRIES can not be used with aggregates.
+- You can not see the data that contributes to the aggregate and the aggregate together
+
+Solution: Use Join for the table
+Internal table will be addressed with @itab_name as we do while using it at any other position in SQL. Providing ALIAS to internal table is mandatory.
+SELECT * FROM /dmo/carrier
+    WHERE carrier_id IN @lr_carriers
+    INTO TABLE @DATA(lt_carrier).
+IF sy-subrc EQ 0.
+  SELECT dtab~carrier_id,
+         connection_id,
+         SUM( seats_occupied ) AS travellers
+    FROM /dmo/flight AS dtab
+         INNER JOIN @lt_carrier AS itab
+         ON dtab~carrier_id = itab~carrier_id
+    GROUP BY dtab~carrier_id, connection_id
+    ORDER BY dtab~carrier_id, connection_id
+    INTO TABLE @DATA(lt_travels_by_connection).
+ENDIF.
